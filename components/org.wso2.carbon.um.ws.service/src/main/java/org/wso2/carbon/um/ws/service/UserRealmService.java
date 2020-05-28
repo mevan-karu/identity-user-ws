@@ -25,12 +25,17 @@ import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public class UserRealmService extends AbstractAdmin {
 
     private static final String NULL_REALM_MESSAGE = "UserRealm is null";
+    private static final String ENCRYPTED_PROPERTY_MASK = "ENCRYPTED_VALUE";
+    private static final Set<String> ENCRYPTED_PROPERTIES = new HashSet<>(Arrays.asList("ConnectionPassword"));
 
 
     public RealmConfigurationDTO getRealmConfiguration() throws UserStoreException {
@@ -42,7 +47,7 @@ public class UserRealmService extends AbstractAdmin {
         realmConfigDTO.setAuthorizationManagerClass(realmConfig.getAuthorizationManagerClass());
         realmConfigDTO.setAdminRoleName(realmConfig.getAdminRoleName());
         realmConfigDTO.setAdminUserName(realmConfig.getAdminUserName());
-        realmConfigDTO.setAdminPassword(realmConfig.getAdminPassword());
+        realmConfigDTO.setAdminPassword(ENCRYPTED_PROPERTY_MASK);
         realmConfigDTO.setEveryOneRoleName(realmConfig.getEveryOneRoleName());
         realmConfigDTO.setUserStoreProperties(getPropertyValueArray(realmConfig
                 .getUserStoreProperties()));
@@ -56,10 +61,19 @@ public class UserRealmService extends AbstractAdmin {
         int i = 0;
         for (Iterator<Map.Entry<String, String>> ite = map.entrySet().iterator(); ite.hasNext(); ) {
             Map.Entry<String, String> entry = ite.next();
-            realmProps[i] = new RealmPropertyDTO(entry.getKey(), entry.getValue());
+            if (isEncryptedProperty(entry.getKey())) {
+                realmProps[i] = new RealmPropertyDTO(entry.getKey(), ENCRYPTED_PROPERTY_MASK);
+            } else {
+                realmProps[i] = new RealmPropertyDTO(entry.getKey(), entry.getValue());
+            }
             i++;
         }
         return realmProps;
+    }
+
+    private boolean isEncryptedProperty(String propertyName) {
+
+        return ENCRYPTED_PROPERTIES.contains(propertyName);
     }
 
     private UserRealm getApplicableUserRealm() throws UserStoreException {
